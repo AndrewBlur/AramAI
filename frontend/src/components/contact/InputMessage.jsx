@@ -1,24 +1,50 @@
-import { ArrowUp, Link as LinkIcon, Paperclip } from "lucide-react";
+import { ArrowUp, Paperclip } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
-const InputMessage = ({ onSubmit }) => {
+const InputMessage = ({ onSubmit, onTyping }) => {
   const textareaRef = useRef(null);
   const [message, setMessage] = useState("");
+  const typingTimeoutRef = useRef(null);
 
   const handleChange = (e) => {
     setMessage(e.target.value);
+
+    // Emit typing indicator
+    if (onTyping) {
+      onTyping(true);
+
+      // Clear previous timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Stop typing after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        onTyping(false);
+      }, 2000);
+    }
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (message.trim() !== "") {
-        onSubmit(message);
+        handleSubmit();
       }
-      setMessage("");
     }
   };
 
+  const handleSubmit = () => {
+    if (message.trim()) {
+      onSubmit(message);
+      setMessage("");
+      
+      // Stop typing indicator
+      if (onTyping) {
+        onTyping(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -29,6 +55,18 @@ const InputMessage = ({ onSubmit }) => {
       )}px`;
     }
   }, [message]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (onTyping) {
+        onTyping(false);
+      }
+    };
+  }, []);
 
   return (
     <div className="w-full px-4 py-2">
@@ -49,9 +87,9 @@ const InputMessage = ({ onSubmit }) => {
         />
 
         <button
-          onClick={onSubmit.bind(null, message)}
+          onClick={handleSubmit}
           disabled={!message.trim()}
-          className=" hover:text-foreground p-2 bg-emerald-500 disabled:opacity-65 rounded-xl hover:scale-105 transition-all duration-150"
+          className="hover:text-foreground p-2 bg-emerald-500 disabled:opacity-65 rounded-xl hover:scale-105 transition-all duration-150"
         >
           <ArrowUp size={22} className="text-white" />
         </button>

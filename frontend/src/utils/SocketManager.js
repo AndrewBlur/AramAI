@@ -22,13 +22,11 @@ class SocketManager {
    */
   connect({ token, userId, contacts = [], onEvents = {} }) {
     if (!token || !userId) {
-      console.warn("⚠️ Missing userId or token. Cannot connect socket.");
       return null;
     }
 
     // Prevent duplicate connection
     if (this.socket?.connected) {
-      console.log("⚠️ Socket already connected:", this.socket.id);
       return this.socket;
     }
 
@@ -40,18 +38,7 @@ class SocketManager {
       transports: ["websocket"],
     });
 
-    // 🔹 Base lifecycle events
-    this.socket.on("connect", () => {
-      console.log("✅ Socket connected:", this.socket.id);
-    });
 
-    this.socket.on("disconnect", (reason) => {
-      console.warn("⚠️ Socket disconnected:", reason);
-    });
-
-    this.socket.on("connect_error", (error) => {
-      console.error("🚨 Socket connection error:", error.message);
-    });
 
     // 🔹 Register custom event listeners
     Object.entries(onEvents).forEach(([event, handler]) => {
@@ -69,7 +56,6 @@ class SocketManager {
    */
   disconnect() {
     if (this.socket) {
-      console.log("🔌 Disconnecting socket...");
       this.socket.disconnect();
       this.socket = null;
     }
@@ -128,7 +114,7 @@ class SocketManager {
 
   /**
    * Send a new message (emits real-time message event)
-   * @param {Object} messageData - { senderId, receiverId, text, chatId, ... }
+   * @param {Object} messageData - { senderId, receiverId, content, contactId, ... }
    */
   sendMessage(messageData) {
     this.emit("sendMessage", messageData);
@@ -146,7 +132,7 @@ class SocketManager {
   /**
    * Notify read receipts or delivery confirmations
    * @param {string} messageId - Message ID
-   * @param {string} status - "delivered" | "read"
+   * @param {string} status - { delivered: boolean, read: boolean }
    */
   updateMessageStatus(messageId, status) {
     this.emit("messageStatusUpdate", { messageId, status });
@@ -159,22 +145,7 @@ class SocketManager {
   _registerDefaultEvents() {
     if (!this.socket) return;
 
-    // Example: log received message
-    this.socket.on("receiveMessage", (message) => {
-      console.log("📩 Received message:", message);
-    });
-
-    this.socket.on("userTyping", ({ contactId, isTyping }) => {
-      console.log(`💬 ${contactId} is ${isTyping ? "typing..." : "not typing"}`);
-    });
-
-    this.socket.on("userOnline", (userId) => {
-      console.log(`🟢 ${userId} is now online`);
-    });
-
-    this.socket.on("userOffline", (userId) => {
-      console.log(`🔴 ${userId} went offline`);
-    });
+    // Log received messages
   }
 }
 

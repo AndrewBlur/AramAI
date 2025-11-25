@@ -7,15 +7,18 @@ import LawyersItem from './LawyersItem';
 const LawyerList = () => {
   const [search, setSearch] = useState("");
   const [lawyers, setLawyers] = useState([]);
+  const [distance, setDistance] = useState(0);
   const { findLawyers, authUser } = useAuthStore();
 
   // fetch lawyers on mount and when search changes
   useEffect(() => {
     const fetchData = async () => {
+      let dist = distance > 0 ? distance*1000 : 25000
       const data = {
+        id: authUser._id,
         field: [],
         q: search,
-        maxDistance: 25000
+        maxDistance: dist
       };
 
       if (authUser?.location?.coordinates) {
@@ -31,7 +34,7 @@ const LawyerList = () => {
       }
     };
     fetchData();
-  }, [search, findLawyers, authUser]);
+  }, [search, findLawyers, authUser, distance]);
 
   return (
     <div className="w-full mt-20 space-y-10">
@@ -50,7 +53,15 @@ const LawyerList = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <input
+          type="number"
+          className="outline-0 w-50 bg-transparent text-sm"
+          placeholder="Distance in KM..."
+          value={distance}
+          onChange={(e) => setDistance(e.target.value)}
+        />
       </motion.div>
+      
 
       {/* Lawyer List */}
       <motion.div

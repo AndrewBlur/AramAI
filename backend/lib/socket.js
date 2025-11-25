@@ -1,104 +1,134 @@
-import { Server } from "socket.io";
-import http from "http";
-import express from "express";
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import dotenv from 'dotenv';
 
-const app = express();
-const server = http.createServer(app);
+dotenv.config();
 
-const io = new Server(server, {
+// Create Express app
+export const app = express();
+
+// Create HTTP server
+export const server = createServer(app);
+
+// Initialize Socket.IO
+export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // frontend origin
-    methods: ["GET", "POST"],
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE"]
   },
 });
 
-// 🔹 Map of connected users => userId : [socketIds]
-const userSocketMap = {};
+// Store online users: userId -> socketId
+const onlineUsers = new Map();
 
-// Helper function to get a receiver’s active sockets
-export function getReceiverSocketIds(userId) {
-  return userSocketMap[userId] || [];
-}
+// Attach io to app for use in controllers
+app.set('io', io);
 
 io.on("connection", (socket) => {
-  const userId = socket.handshake.auth?.userId;
-  const contacts = socket.handshake.auth?.contacts || [];
+  const { userId, contacts, token } = socket.handshake.auth;
 
   if (!userId) {
-    console.warn("⚠️ Socket connected without userId:", socket.id);
-    socket.disconnect(true);
+    console.log("⚠️ No userId provided, disconnecting socket");
+    socket.disconnect();
     return;
   }
 
-  // Add socket to user’s list
-  if (!userSocketMap[userId]) userSocketMap[userId] = [];
-  userSocketMap[userId].push(socket.id);
+  console.log(`✅ User connected: ${userId} (Socket ID: ${socket.id})`);
 
-  console.log(`✅ User ${userId} connected (${socket.id})`);
+  // Add user to online users
+  onlineUsers.set(userId, socket.id);
 
-  // Send online contacts to this user
-  const onlineContacts = contacts.filter((id) => userSocketMap[id]);
-  socket.emit("getOnlineUsers", onlineContacts);
+  // Send list of currently online users to the newly connected user
+  const onlineUserIds = Array.from(onlineUsers.keys());
+  socket.emit("getOnlineUsers", onlineUserIds);
 
-  // Notify contacts this user is online
-  contacts.forEach((id) => {
-    const sockets = userSocketMap[id];
-    if (sockets)
-      sockets.forEach((sid) => io.to(sid).emit("userOnline", userId));
-  });
-
-  // ======================================================
-  // 💬 MESSAGE EVENTS
-  // ======================================================
-
-  socket.on("sendMessage", (messageData) => {
-    console.log(`📤 Message from ${userId} → ${messageData.receiverId}`);
-    const receiverSockets = getReceiverSocketIds(messageData.receiverId);
-
-    // Emit to all receiver sockets
-    receiverSockets.forEach((sid) => {
-      io.to(sid).emit("receiveMessage", messageData);
+  // Notify all contacts that this user is now online
+  if (contacts && Array.isArray(contacts)) {
+    contacts.forEach((contactId) => {
+      const contactSocketId = onlineUsers.get(contactId);
+      if (contactSocketId) {
+        io.to(contactSocketId).emit("userOnline", userId);
+      }
     });
+  }
+
+  // ===========================
+  // 📩 SEND MESSAGE
+  // ===========================
+  socket.on("sendMessage", async (messageData) => {
+    console.log("📤 Sending message via socket:", messageData);
+
+    const { receiverId, senderId, contactId } = messageData;
+
+    // Emit to receiver if online
+    const receiverSocketId = onlineUsers.get(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("receiveMessage", messageData);
+      console.log(`✅ Message delivered to ${receiverId} (${receiverSocketId})`);
+    } else {
+      console.log(`⚠️ Receiver ${receiverId} is offline`);
+    }
+
+    // Also emit back to sender for confirmation (optional)
+    socket.emit("receiveMessage", messageData);
   });
 
-  // ======================================================
-  // ✍️ TYPING INDICATOR
-  // ======================================================
+  // ===========================
+  // ⌨️ TYPING INDICATOR
+  // ===========================
   socket.on("typing", ({ contactId, isTyping }) => {
-    const receiverSockets = getReceiverSocketIds(contactId);
-    receiverSockets.forEach((sid) =>
-      io.to(sid).emit("userTyping", { contactId: userId, isTyping })
-    );
+    console.log(`💬 User ${userId} is ${isTyping ? "typing" : "idle"} to ${contactId}`);
+
+    const contactSocketId = onlineUsers.get(contactId);
+    if (contactSocketId) {
+      io.to(contactSocketId).emit("userTyping", {
+        contactId: userId,
+        isTyping,
+      });
+    }
   });
 
-  // ======================================================
-  // 📨 MESSAGE STATUS (Delivered / Read)
-  // ======================================================
+  // ===========================
+  // ✓ MESSAGE STATUS UPDATE (READ/DELIVERED)
+  // ===========================
   socket.on("messageStatusUpdate", ({ messageId, status }) => {
-    console.log(`📬 Message ${messageId} marked as ${status}`);
-    // You can broadcast to involved users if needed
-    io.emit("messageStatusUpdated", { messageId, status });
+    console.log(`✓ Message ${messageId} status update:`, status);
+
+    // Broadcast to all connected users
+    io.emit("messageStatusUpdate", { messageId, status });
   });
 
-  // ======================================================
-  // ❌ DISCONNECT
-  // ======================================================
+  // ===========================
+  // 🔌 DISCONNECT
+  // ===========================
   socket.on("disconnect", () => {
-    console.log(`❌ User ${userId} disconnected (${socket.id})`);
+    console.log(`🔴 User disconnected: ${userId} (${socket.id})`);
 
-    // Remove socket from map
-    userSocketMap[userId] = (userSocketMap[userId] || []).filter(
-      (sid) => sid !== socket.id
-    );
-    if (userSocketMap[userId].length === 0) delete userSocketMap[userId];
+    // Remove from online users
+    onlineUsers.delete(userId);
 
-    // Notify contacts that user went offline
-    contacts.forEach((id) => {
-      const sockets = userSocketMap[id];
-      if (sockets)
-        sockets.forEach((sid) => io.to(sid).emit("userOffline", userId));
-    });
+    // Notify all contacts that user went offline
+    if (contacts && Array.isArray(contacts)) {
+      contacts.forEach((contactId) => {
+        const contactSocketId = onlineUsers.get(contactId);
+        if (contactSocketId) {
+          io.to(contactSocketId).emit("userOffline", userId);
+        }
+      });
+    }
+
+    // Also broadcast to all users
+    io.emit("userOffline", userId);
+  });
+
+  // ===========================
+  // 🔄 ERROR HANDLING
+  // ===========================
+  socket.on("error", (error) => {
+    console.error(`❌ Socket error for user ${userId}:`, error);
   });
 });
 
-export { io, app, server };
+console.log("🔌 Socket.IO initialized");

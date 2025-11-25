@@ -223,9 +223,9 @@ export const updateUserProfile = async (req, res) => {
 
 export const findLawyers = async (req, res) => {
   try {
-    const { field, q, longitude, latitude, maxDistance } = req.body;
+    const { id, field, q, longitude, latitude, maxDistance } = req.body;
 
-    let filters = [{ role: "lawyer" }];
+    let filters = [{ role: "lawyer"},{ _id: { $ne: id } }];
 
     if (q) {
       filters.push({
@@ -246,6 +246,7 @@ export const findLawyers = async (req, res) => {
     const query = filters.length > 1 ? { $and: filters } : filters[0];
 
     let lawyers;
+    console.log(parseInt(maxDistance));
     if (longitude && latitude) {
       lawyers = await User.find({
         ...query,

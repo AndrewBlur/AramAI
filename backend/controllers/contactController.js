@@ -18,18 +18,42 @@ const createContact = asyncHandler(async (req, res) => {
   const user1Id = new mongoose.Types.ObjectId(user1);
   const user2Id = new mongoose.Types.ObjectId(user2);
 
-  // Prevent duplicates
+  // Prevent duplicates - check both directions
   const existingContact = await Contact.findOne({
     $or: [
       { user1: user1Id, user2: user2Id },
       { user1: user2Id, user2: user1Id },
     ],
-  });
+  }).populate([
+    { path: "user1", select: "firstName lastName email profilePic" },
+    { path: "user2", select: "firstName lastName email profilePic" },
+    { path: "lastMessage", select: "content createdAt read" }
+  ]);
 
   if (existingContact) {
-    return res.status(200).json(existingContact);
+    // Format existing contact for frontend
+    const currentUserId = req.user?.userId || user1;
+    const otherUser = existingContact.user1._id.toString() === currentUserId.toString() 
+      ? existingContact.user2 
+      : existingContact.user1;
+
+    const formattedContact = {
+      _id: existingContact._id,
+      contactUser: {
+        _id: otherUser._id,
+        firstName: otherUser.firstName,
+        lastName: otherUser.lastName,
+        email: otherUser.email,
+        profilePic: otherUser.profilePic,
+      },
+      lastMessage: existingContact.lastMessage || null,
+      updatedAt: existingContact.updatedAt,
+    };
+
+    return res.status(200).json(formattedContact);
   }
 
+  // Create new contact
   const newContact = await Contact.create({
     user1: user1Id,
     user2: user2Id,
@@ -45,7 +69,26 @@ const createContact = asyncHandler(async (req, res) => {
     { path: "user2", select: "firstName lastName email profilePic" },
   ]);
 
-  res.status(201).json(populatedContact);
+  // Format response for frontend
+  const currentUserId = req.user?.userId || user1;
+  const otherUser = populatedContact.user1._id.toString() === currentUserId.toString() 
+    ? populatedContact.user2 
+    : populatedContact.user1;
+
+  const formattedContact = {
+    _id: populatedContact._id,
+    contactUser: {
+      _id: otherUser._id,
+      firstName: otherUser.firstName,
+      lastName: otherUser.lastName,
+      email: otherUser.email,
+      profilePic: otherUser.profilePic,
+    },
+    lastMessage: null,
+    updatedAt: populatedContact.updatedAt,
+  };
+
+  res.status(201).json(formattedContact);
 });
 
 // ======================================================
@@ -61,17 +104,17 @@ const getContacts = asyncHandler(async (req, res) => {
 
   const userObjectId = new mongoose.Types.ObjectId(userId);
 
-
   // Find all contacts where user is either user1 or user2
   const contacts = await Contact.find({
     $or: [{ user1: userObjectId }, { user2: userObjectId }],
-  }).populate("lastMessage").lean()
+  })
+    .populate("lastMessage")
+    .lean()
     .populate("user1", "firstName lastName email profilePic")
     .populate("user2", "firstName lastName email profilePic")
-
     .sort({ updatedAt: -1 });
 
-  // Transform data so frontend always sees “the other person”
+  // Transform data so frontend always sees "the other person"
   const formattedContacts = contacts.map((contact) => {
     const otherUser =
       contact.user1._id.toString() === userId ? contact.user2 : contact.user1;
@@ -137,7 +180,7 @@ const updateLastMessage = asyncHandler(async (req, res) => {
   const updatedContact = await contact.save();
 
   // Populate for frontend preview refresh
-  const populated = await updatedContact.populate("lastMessage", "content createdAt");
+  const populated = await updatedContact.populate("lastMessage", "content createdAt read");
 
   res.status(200).json(populated);
 });
