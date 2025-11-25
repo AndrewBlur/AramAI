@@ -154,7 +154,6 @@ const SearchStages = ({ searchInfo }) => {
 
 const MessageArea = ({ messages }) => {
   const endRef = useRef();
-  console.log(messages)
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);

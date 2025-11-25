@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { socketManager } from '../../utils/SocketManager';
 
 const ContactList = () => {
+    
+    console.log("contact page rendered.")
     const navigate = useNavigate();
     const { 
         getContacts, 
