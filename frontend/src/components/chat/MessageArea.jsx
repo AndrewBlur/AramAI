@@ -154,6 +154,7 @@ const SearchStages = ({ searchInfo }) => {
 
 const MessageArea = ({ messages }) => {
   const endRef = useRef();
+  console.log(messages)
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
@@ -200,7 +201,7 @@ const MessageArea = ({ messages }) => {
                 <PremiumTypingAnimation />
               ) : (
                 (message.role === "user" ? (
-                  message.content
+                  <p>{message.content}</p>
                 ) : (
                   <ReactMarkdown>{message.content}</ReactMarkdown>
                 )) || (
