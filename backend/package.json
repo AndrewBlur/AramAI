@@ -4,10 +4,10 @@
   "description": "The back end for the Aram AI with mongo",
   "main": "index.js",
   "type": "module",
- "scripts": {
-  "dev": "node --watch index.js",
-  "start": "node index.js"
-},
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
   "repository": {
     "type": "git",
     "url": "ARAMAI"
@@ -17,6 +17,7 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.8.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",

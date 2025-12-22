@@ -15,14 +15,17 @@ import contactRoutes from './routes/contactRoutes.js';
 // Import app, server, and io from socket.js
 import { app, server, io } from './lib/socket.js';
 
-dotenv.config();
-
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_DEV_URI;
-
 // Fix __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load .env only in development (Render sets env vars directly)
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: path.resolve(__dirname, '../.env') });
+}
+
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_DEV_URI;
 
 // ===========================
 // MIDDLEWARE (ORDER MATTERS!)
@@ -58,8 +61,8 @@ app.get('/', (req, res) => {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     socketIO: io ? 'active' : 'inactive'
   });
