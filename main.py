@@ -16,8 +16,8 @@ async def lifespan(app: FastAPI):
     print("🔄 Initializing MongoDB and LangGraph...")
 
     try:
-        # Initialize MongoDB saver (async context manager)
-        async with await init_mongo_saver() as checkpointer:
+        # Initialize MongoDB saver (synchronous context manager)
+        with init_mongo_saver() as checkpointer:
             graph = await create_app_async(checkpointer)
             if not graph:
                 raise RuntimeError("Graph initialization failed — check logs above.")
