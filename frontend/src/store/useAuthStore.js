@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { io } from "socket.io-client";
 import { redirect, replace } from "react-router-dom";
 
-
 export const useAuthStore = create((set, get) => ({
   authUser: null,
   isLoggingIn: false,
