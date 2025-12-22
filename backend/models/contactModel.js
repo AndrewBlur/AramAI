@@ -4,29 +4,23 @@ const contactSchema = new mongoose.Schema(
   {
     user1: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
+      ref: "User", 
       required: true,
     },
     user2: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "user",
+      ref: "User", 
       required: true,
     },
-
-    messages: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "message",
-      }
-    ],
-
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "message",
-    }
+      ref: "Message",
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-const Contact = mongoose.model("contact", contactSchema);
+// ✅ Capitalized for convention and clarity
+const Contact = mongoose.model("Contact", contactSchema);
 export default Contact;

@@ -98,7 +98,7 @@ const ScrollSection = () => {
           </div>
           <div  className="pr-4 lg:pr-8 xl:pr-16 2xl:pr-32 lg:h-[80vh] md:w-[70%] w-[90%] lg:w-[50%]">
             <div className="h-full w-full  rounded-4xl">
-                <motion.img initial={{scale:0.5}} whileInView={{scale:1}} transition={{duration:1}} src="/images/botreadingbook.jpg" className="w-full h-full object-cover rounded-4xl" alt="" />
+                <motion.img initial={{scale:0.5}} whileInView={{scale:1}} transition={{duration:1}} exit={{scale:0.5}} src="/images/botreadingbook.jpg" className="w-full h-full object-cover rounded-4xl" alt="" />
             </div>
           </div>
         </section>

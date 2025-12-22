@@ -13,7 +13,7 @@ import { Loader } from "lucide-react";
 import Layout from "./contexts/LayoutContext";
 import RedirectToLatestChat from "./contexts/RedirectToLatestChat";
 import LawyerPage from "./pages/LawyerPage";
-import ContactPage from "./pages/Contact";
+import ContactPage from "./pages/ContactPage";
 
 function App() {
   const { isCheckingAuth, authUser, checkAuth } = useAuthStore();

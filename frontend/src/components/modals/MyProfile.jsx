@@ -55,7 +55,9 @@ const MyProfile = () => {
   const handleSave = async () => {
     if (!isProfileChanged) return;
     try {
-      await updateProfile({ ...formdata, profilePic: selectedImage });
+      console.log("Updating profile with data:", { ...formdata, profilePic: selectedImage });
+      const updatedUser = await updateProfile({ ...formdata, profilePic: selectedImage });
+      console.log("Profile updated successfully:", updatedUser);
       setIsProfileChanged(false);
       setShowMyProfile();
     } catch (error) {

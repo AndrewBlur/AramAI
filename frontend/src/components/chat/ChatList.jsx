@@ -57,7 +57,7 @@ const ChatList = ({ chats, onNewChat, userId }) => {
   }, []);
 
   return (
-    <div className="w-full h-fit px-3 flex flex-col relative">
+    <div className="w-full h-fit px-3 flex flex-col relative ">
       {/* New Chat Button */}
       <div className="font-medium tracking-wider text-xs opacity-60 mb-4">
         ARAM AI
@@ -83,7 +83,7 @@ const ChatList = ({ chats, onNewChat, userId }) => {
                   currentChatId === chat._id ? "bg-foreground/10" : ""
                 }`}
               >
-                {chat.name || "Untitled Chat"}
+                <span>{chat.name || "Untitled Chat"}</span>
               </button>
 
               {/* Ellipsis Menu Button */}

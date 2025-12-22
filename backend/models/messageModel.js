@@ -4,12 +4,17 @@ const messageSchema = new mongoose.Schema(
   {
     contactId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'contact',
+      ref: 'Contact',
       required: true,
     },
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'user',
+      ref: 'User',
+      required: true,
+    },
+    receiverId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
     },
     content: {

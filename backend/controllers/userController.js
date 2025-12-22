@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import cloudinary from '../lib/clouninary.js';
+import cloudinary from '../lib/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -157,6 +157,7 @@ export const updateUserProfile = async (req, res) => {
   try {
     let updates = { ...req.body };
     const file = req.file;
+    console.log("Received profile update with data:", updates, "and file:", file);
 
     // Parse JSON fields if they exist
     if (updates.field) {
@@ -222,9 +223,9 @@ export const updateUserProfile = async (req, res) => {
 
 export const findLawyers = async (req, res) => {
   try {
-    const { field, q, longitude, latitude, maxDistance } = req.body;
+    const { id, field, q, longitude, latitude, maxDistance } = req.body;
 
-    let filters = [{ role: "lawyer" }];
+    let filters = [{ role: "lawyer"},{ _id: { $ne: id } }];
 
     if (q) {
       filters.push({
@@ -245,6 +246,7 @@ export const findLawyers = async (req, res) => {
     const query = filters.length > 1 ? { $and: filters } : filters[0];
 
     let lawyers;
+    console.log(parseInt(maxDistance));
     if (longitude && latitude) {
       lawyers = await User.find({
         ...query,

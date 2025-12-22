@@ -16,7 +16,7 @@ const Layout = ({ children }) => {
       {showNavbar && <VerticalNavbar />}
       {showMyProfile && <MyProfile />}
       
-      <div className={`${showNavbar ? "pl-20 md:pl-0 " : ""}  flex-1`}>
+      <div className={`${showNavbar ? "pl-[60px] md:pl-0 " : ""}  flex-1`}>
         {children}
       </div>
     </div>

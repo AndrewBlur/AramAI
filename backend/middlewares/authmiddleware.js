@@ -27,3 +27,4 @@ export const authorize = (roles) => {
     };
 };
 
+export default { protect, authorize };

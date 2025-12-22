@@ -14,7 +14,7 @@ const PremiumTypingAnimation = () => {
           style={{ animationDuration: "1s", animationDelay: "0ms" }}
         ></div>
         <div
-          className="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-pulse"
+          className="w-1.5 h-1.5 bg-muzted-foreground/70 rounded-full animate-pulse"
           style={{ animationDuration: "1s", animationDelay: "300ms" }}
         ></div>
         <div
@@ -54,7 +54,7 @@ const SearchStages = ({ searchInfo }) => {
                 
                 <div className={`absolute -left-3 top-1 w-2.5 h-2.5 rounded-full z-10 shadow-sm ${stage === 'error' ? 'bg-destructive' : 'bg-emerald-main'}`}></div>
                 {!isLast && (
-                  <div className="absolute -left-[7px] top-3 w-0.5 h-[calc(100%+1rem)] bg-gradient-to-b from-emerald-main/70 to-emerald-main/40"></div>
+                  <div className="absolute -left-[8px] top-3 w-0.5 h-[calc(100%+1rem)] bg-gradient-to-b from-emerald-main/70 to-emerald-main/40"></div>
                 )}
                 
 
@@ -171,7 +171,7 @@ const MessageArea = ({ messages }) => {
   }
   return (
   <div
-    className="bg-background h-full w-[95%] md:w-[90%] lg:w-[85%] xl:w-[75%] 2xl:w-[65%]"
+    className="bg-background h-full w-[95%] md:w-xl lg:w-4xl xl:w-5xl 2xl:w-6xl"
     style={{ minHeight: 0 }}
   >
     <div className="mx-auto p-6">
@@ -200,7 +200,7 @@ const MessageArea = ({ messages }) => {
                 <PremiumTypingAnimation />
               ) : (
                 (message.role === "user" ? (
-                  message.content
+                  <p>{message.content}</p>
                 ) : (
                   <ReactMarkdown>{message.content}</ReactMarkdown>
                 )) || (
