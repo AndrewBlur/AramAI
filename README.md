@@ -36,7 +36,7 @@ Frontend** – Provides a smooth, mobile-friendly user interface.
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/AndrewBlur/AramAI.git
 cd AramAI
 ```
 
