@@ -70,9 +70,20 @@ async def health():
 
 
 def serialise_ai_message_chunk(chunk):
-    """Safely serialise AI message chunks."""
+    """Safely serialise AI message chunks to plain text."""
     if isinstance(chunk, AIMessageChunk):
-        return chunk.content
+        content = chunk.content
+        # Handle string content directly
+        if isinstance(content, str):
+            return content
+        # Handle list content: [{"type": "text", "text": "...", "extras": {...}}]
+        if isinstance(content, list):
+            text_parts = []
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    text_parts.append(item.get("text", ""))
+            return "".join(text_parts)
+        return ""
     raise TypeError(f"Invalid chunk type: {type(chunk).__name__}")
 
 

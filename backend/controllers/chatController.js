@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import Chat from "../models/chatModel.js";
 import User from "../models/userModel.js";
 import { generateChatName, safeJSONParse } from "../lib/utils.js";
@@ -62,7 +61,6 @@ export const sendMessage = async (req, res) => {
 
     let streamedContent = "";
     let searchInfo = { stages: [], query: "", urls: [], internalQuery: "", internalUrls: [], ragQuery: "", ragContext: "", error: null };
-    let aiMessageSaved = false;
     let letter = "";
 
     // 3️⃣ Call AI API streaming endpoint
@@ -78,114 +76,99 @@ export const sendMessage = async (req, res) => {
     }
     const reader = aiResponse.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = ""; // Buffer to accumulate incomplete chunks
 
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
 
-      // Accumulate chunks in buffer
-      buffer += decoder.decode(value, { stream: true });
+      const chunk = decoder.decode(value, { stream: true }).trim();
+      if (!chunk) continue;
 
-      // Process complete SSE messages (they end with \n\n)
-      const messages = buffer.split("\n\n");
+      const lines = chunk.split("\n").filter(Boolean);
+      for (const line of lines) {
+        try {
+          // 🔹 Strip `data:` prefix
+          const cleanLine = line.startsWith("data:") ? line.replace(/^data:\s*/, "") : line;
+          if (!cleanLine) continue;
 
-      // Keep the last potentially incomplete message in buffer
-      buffer = messages.pop() || "";
+          const data = safeJSONParse(cleanLine);
 
-      for (const message of messages) {
-        if (!message.trim()) continue;
+          // Stream to frontend
+          console.log(data);
+          res.write(`data: ${JSON.stringify(data)}\n\n`);
 
-        // Handle multi-line SSE messages
-        const lines = message.split("\n");
-        for (const line of lines) {
-          if (!line.trim()) continue;
-
-          try {
-            // Strip `data:` prefix
-            const cleanLine = line.startsWith("data:") ? line.replace(/^data:\s*/, "") : line;
-            if (!cleanLine) continue;
-
-            const data = safeJSONParse(cleanLine);
-            if (!data) continue; // Skip if parse failed
-
-            // Stream to frontend
-            console.log(data);
-            res.write(`data: ${JSON.stringify(data)}\n\n`);
-
-            // Build the persistent searchInfo object on the backend
-            switch (data.type) {
-              case "checkpoint":
-                if (data.checkpoint_id) {
-                  await Chat.findByIdAndUpdate(chatId, { checkpoint_id: data.checkpoint_id });
+          // Build the persistent searchInfo object on the backend
+          switch (data.type) {
+            case "checkpoint":
+              if (data.checkpoint_id) {
+                await Chat.findByIdAndUpdate(chatId, { checkpoint_id: data.checkpoint_id });
+              }
+              break;
+            case "search_start":
+              searchInfo.stages.push("searching");
+              searchInfo.query = data.query;
+              break;
+            case "search_results":
+              searchInfo.stages.push("reading");
+              searchInfo.urls = Array.isArray(data.urls) ? data.urls : [];
+              break;
+            case "i_search_start":
+              searchInfo.stages.push("internal_searching");
+              searchInfo.internalQuery = data.query;
+              break;
+            case "i_search_results":
+              searchInfo.stages.push("internal_reading");
+              const i_urls = Array.isArray(data.urls) ? data.urls : (data.url ? [data.url] : []);
+              searchInfo.internalUrls = i_urls;
+              break;
+            case "rag_start":
+              searchInfo.stages.push("rag_searching");
+              searchInfo.ragQuery = data.query;
+              break;
+            case "rag_results":
+              searchInfo.stages.push("rag_reading");
+              searchInfo.ragContext = data.context;
+              break;
+            case "content":
+              streamedContent += data.content;
+              break;
+            case "search_error":
+              searchInfo.stages.push("error");
+              searchInfo.error = data.message;
+              break;
+            case "letter":
+              letter += data.letter;
+              break;
+            case "end":
+              // Now save the complete object
+              await Chat.findByIdAndUpdate(chatId, {
+                $push: { messages: { role: "user", content: query.query, messageId: messageId } },
+              });
+              if (streamedContent.trim()) {
+                // Remove duplicates before saving
+                let messages = {
+                  role: "ai",
+                  content: streamedContent,
+                  searchInfo: searchInfo,
+                  messageId: Number(messageId) + 1
                 }
-                break;
-              case "search_start":
-                searchInfo.stages.push("searching");
-                searchInfo.query = data.query;
-                break;
-              case "search_results":
-                searchInfo.stages.push("reading");
-                searchInfo.urls = Array.isArray(data.urls) ? data.urls : [];
-                break;
-              case "i_search_start":
-                searchInfo.stages.push("internal_searching");
-                searchInfo.internalQuery = data.query;
-                break;
-              case "i_search_results":
-                searchInfo.stages.push("internal_reading");
-                const i_urls = Array.isArray(data.urls) ? data.urls : (data.url ? [data.url] : []);
-                searchInfo.internalUrls = i_urls;
-                break;
-              case "rag_start":
-                searchInfo.stages.push("rag_searching");
-                searchInfo.ragQuery = data.query;
-                break;
-              case "rag_results":
-                searchInfo.stages.push("rag_reading");
-                searchInfo.ragContext = data.context;
-                break;
-              case "content":
-                streamedContent += data.content;
-                break;
-              case "search_error":
-                searchInfo.stages.push("error");
-                searchInfo.error = data.message;
-                break;
-              case "letter":
-                letter += data.letter;
-                break;
-              case "end":
-                // Now save the complete object
+                if (letter.length !== "") {
+                  messages.letter = letter;
+                }
+                searchInfo.stages = Array.from(new Set(searchInfo.stages));
                 await Chat.findByIdAndUpdate(chatId, {
-                  $push: { messages: { role: "user", content: query.query, messageId: messageId } },
+                  $push: { messages },
+                  checkpoint_id: checkpoint_id
                 });
-                if (streamedContent.trim()) {
-                  // Remove duplicates before saving
-                  let messages = {
-                    role: "ai",
-                    content: streamedContent,
-                    searchInfo: searchInfo,
-                    messageId: Number(messageId) + 1
-                  }
-                  if (letter.length !== "") {
-                    messages.letter = letter;
-                  }
-                  searchInfo.stages = Array.from(new Set(searchInfo.stages));
-                  await Chat.findByIdAndUpdate(chatId, {
-                    $push: { messages },
-                    checkpoint_id: checkpoint_id
-                  });
-                  aiMessageSaved = true;
-                }
-                break;
-            }
-          } catch (err) {
-            console.error("Error parsing AI chunk:", err, line);
-            res.write(
-              `data: ${JSON.stringify({ type: "search_error", message: "AI chunk parse error" })}\n\n`
-            );
+              }
+              break;
           }
+        } catch (err) {
+          console.error("Error parsing AI chunk:", err, line);
+          res.write(
+            `data: ${JSON.stringify({ type: "search_error", message: "AI chunk parse error" })}\n\n`
+          );
+
         }
       }
     }
